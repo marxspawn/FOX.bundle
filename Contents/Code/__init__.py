@@ -76,7 +76,7 @@ def Special(latest = False):
         episodes_data = JSON.ObjectFromURL(url = String.Decode(SERIES_URL) % String.Quote(found_show['title']))
 
         for episode in episodes_data['results']:
-            if (int(episode['episode']) == int(featured_episode['fox$episode'])) and (int(episode['season']) == int(featured_episode['fox$season'])):
+            if (episode['episode'] and 'fox$episode' in featured_episode and int(episode['episode']) == int(featured_episode['fox$episode'])) and (episode['season'] and 'fox$season' in featured_episode and int(episode['season']) == int(featured_episode['fox$season'])):
                 episode_oc = Episodes(title = found_show['title'], stub = found_show['stub'], season = str(episode['season']), forced_episode = int(episode['season']))
                 
                 for object in episode_oc.objects:
@@ -204,8 +204,8 @@ def Episodes(title, stub, season, forced_episode = None):
         except:
             show = episode['series']
 
-        index = int(episode['episode'])
-        season = int(episode['season'])
+        index = int(episode['episode']) if episode['episode'] else None
+        season = int(episode['season']) if episode['season'] else None
         originally_available_at = episode['airdate']
         
         forced_episode_found = False
