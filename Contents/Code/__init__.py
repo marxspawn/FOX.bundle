@@ -1,5 +1,7 @@
 PREFIX = '/video/fox'
 TITLE = 'FOX'
+ART = 'art-default.jpg'
+ICON = 'icon-default.jpg'
 
 SHOWS_URL = 'aHR0cDovL2Fzc2V0cy5mb3guY29tL2FwcHMvRkVBL3YxLjgvYWxsc2hvd3MuanNvbg__'
 SERIES_URL = 'aHR0cDovL2ZlZWQudGhlcGxhdGZvcm0uY29tL2YvZm94LmNvbS9tZXRhZGF0YT9jb3VudD10cnVlJmJ5Q3VzdG9tVmFsdWU9e2Z1bGxFcGlzb2RlfXt0cnVlfSZieUNhdGVnb3JpZXM9U2VyaWVzLyVz'
@@ -22,7 +24,7 @@ def Start():
     HTTP.User_Agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/600.3.18 (KHTML, like Gecko) Version/8.0.3 Safari/600.3.18'
 
 ##########################################################################################
-@handler(PREFIX, TITLE)
+@handler(PREFIX, TITLE, art=ART, thumb=ICON)
 def MainMenu():
     
     oc = ObjectContainer()
