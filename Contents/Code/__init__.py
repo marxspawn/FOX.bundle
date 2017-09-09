@@ -122,7 +122,7 @@ def Shows():
         if show['fullepisodes'] == "false":
             continue
             
-        if show['external_link']:
+        if 'external_link' in show and show['external_link']:
             continue
            
         oc.add(
