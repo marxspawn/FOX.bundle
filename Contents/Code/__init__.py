@@ -67,6 +67,7 @@ def Series(url, title):
 	return oc
 
 ####################################################################################################
+@route(PREFIX + '/episodes')
 def Episodes(url, title):
 
 	oc = ObjectContainer(title2=title)
@@ -102,6 +103,7 @@ def Episodes(url, title):
 	return oc
 
 ####################################################################################################
+@route(PREFIX + '/api/json')
 def GetJSON(url):
 
 	json_obj = JSON.ObjectFromURL(url, headers={"User-Agent": USER_AGENT, "apikey": "abdcbed02c124d393b39e818a4312055"})
