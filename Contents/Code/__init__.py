@@ -2,283 +2,107 @@ PREFIX = '/video/fox'
 TITLE = 'FOX'
 ART = 'art-default.jpg'
 ICON = 'icon-default.jpg'
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Safari/604.1.38'
 
-SHOWS_URL = 'aHR0cDovL2Fzc2V0cy5mb3guY29tL2FwcHMvRkVBL3YxLjgvYWxsc2hvd3MuanNvbg__'
-SERIES_URL = 'aHR0cDovL2ZlZWQudGhlcGxhdGZvcm0uY29tL2YvZm94LmNvbS9tZXRhZGF0YT9jb3VudD10cnVlJmJ5Q3VzdG9tVmFsdWU9e2Z1bGxFcGlzb2RlfXt0cnVlfSZieUNhdGVnb3JpZXM9U2VyaWVzLyVz'
-FEATURED_URL = 'aHR0cDovL2ZlZWQudGhlcGxhdGZvcm0uY29tL2YvVEJtbzFCL2FwcGxldHYtZmVhdHVyZWQ/YWRhcHRlclBhcmFtcz1tdnBkJTNEJnJhbmdlPTEtMTAx'
-
-SHOW_IMAGE_URL = 'http://www.fox.com/_ugc/feeds/images/%s/aptveSeries.jpg'
-FALLBACK_THUMB = 'http://resources-cdn.plexapp.com/image/source/com.plexapp.plugins.fox.jpg'
-
-VIDEO_TEMPLATE_URL = 'http://www.fox.com/watch/%s'
-
-SMIL_NS = {'a': 'http://www.w3.org/2005/SMIL21/Language'}
-
-##########################################################################################
-def Start():
-
-    # Setup the default attributes for the ObjectContainer
-    ObjectContainer.title1 = TITLE
-
-    HTTP.CacheTime = CACHE_1HOUR
-    HTTP.User_Agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/600.3.18 (KHTML, like Gecko) Version/8.0.3 Safari/600.3.18'
-
-##########################################################################################
-@handler(PREFIX, TITLE, art=ART, thumb=ICON)
-def MainMenu():
-    
-    oc = ObjectContainer()
-
-    oc.add(
-        DirectoryObject(
-            key = Callback(Special, latest = True),
-            title = 'Latest'
-        )
-    )
-
-    oc.add(
-        DirectoryObject(
-            key = Callback(Special),
-            title = 'Featured'
-        )
-    )
-    
-    oc.add(
-        DirectoryObject(
-            key = Callback(Shows),
-            title = 'All Shows'
-        )
-    )
-
-    return oc
-    
-##########################################################################################
-@route(PREFIX + '/special')
-def Special(latest = False):
-    
-    oc = ObjectContainer()
-
-    featured_data = JSON.ObjectFromURL(url = String.Decode(FEATURED_URL))
-    shows_data = JSON.ObjectFromURL(url = String.Decode(SHOWS_URL))
-    
-    episodes = {}
-    for featured_episode in featured_data['entries']:
-        if not featured_episode['fox$fullEpisode']:
-            continue
-        
-        found_show = None    
-        for show in shows_data['shows']:
-            if show['stub'] == featured_episode['fox$showcode']:
-                found_show = show
-                break
-                
-        if not found_show:
-            continue
-            
-        episodes_data = JSON.ObjectFromURL(url = String.Decode(SERIES_URL) % String.Quote(found_show['title']))
-
-        for episode in episodes_data['results']:
-            if (episode['episode'] and 'fox$episode' in featured_episode and int(episode['episode']) == int(featured_episode['fox$episode'])) and (episode['season'] and 'fox$season' in featured_episode and int(episode['season']) == int(featured_episode['fox$season'])):
-                episode_oc = Episodes(title = found_show['title'], stub = found_show['stub'], season = str(episode['season']), forced_episode = int(episode['season']))
-                
-                for object in episode_oc.objects:
-                    if int(episode['season']) >= 10:
-                        season_string = str(episode['season'])
-                    else:
-                        season_string = '0' + str(episode['season'])
-                        
-                    if int(episode['episode']) >= 10:
-                        episode_string = str(episode['episode'])
-                    else:
-                        episode_string = '0' + str(episode['episode'])
-                        
-                    object.title = object.title + ', S%sE%s' % (season_string, episode_string)
-                    
-                    if latest:
-                        try:
-                            episodes[episode['airdate']] = object
-                        except:
-                            pass
-                    else:
-                        oc.add(object)
-                
-                break
-
-    if latest:
-        for key in sorted(episodes, reverse=True):
-            oc.add(episodes[key])
-  
-    return oc
-
-##########################################################################################
-@route(PREFIX + '/shows')
-def Shows():
-    
-    oc = ObjectContainer()
-
-    json_data = JSON.ObjectFromURL(url = String.Decode(SHOWS_URL))
-    
-    for show in json_data['shows']:
-        if show['fullepisodes'] == "false":
-            continue
-            
-        if 'external_link' in show and show['external_link']:
-            continue
-           
-        oc.add(
-            TVShowObject(
-                key = Callback(Seasons, title = show['title'], stub = show['stub']),
-                rating_key = show['title'],
-                studio = 'FOX',
-                title = show['title'],
-                thumb = Resource.ContentsOfURLWithFallback(SHOW_IMAGE_URL % show['stub'], FALLBACK_THUMB)
-            ) 
-        )
- 
-    return oc
-
-##########################################################################################
-@route(PREFIX + '/seasons')
-def Seasons(title, stub):
-
-    oc = ObjectContainer(title2 = title)
-    
-    json_url = String.Decode(SERIES_URL) % String.Quote(title)
-    json_data = JSON.ObjectFromURL(url = json_url)
-
-    seasons = {}
-    
-    for episode in json_data['results']:
-        if episode['fullepisode']:
-            if episode['season'] and (not episode['season'] in seasons):
-                seasons[episode['season']] = 1
-            elif episode['season'] and (episode['season'] in seasons):
-                seasons[episode['season']] = seasons[episode['season']] + 1   
-    
-    for season in seasons:
-        oc.add(
-            SeasonObject(
-                key = Callback(Episodes, title = title, stub = stub, season = str(season)),
-                rating_key = title + str(season),
-                title = "Season " + str(season),
-                show = title,
-                index = int(season),
-                episode_count = seasons[season],
-                thumb = Resource.ContentsOfURLWithFallback(SHOW_IMAGE_URL % stub, FALLBACK_THUMB)
-            )
-        )
-
-    if len(oc) < 1:
-        oc.header = "Sorry"
-        oc.message = "Couldn't find any full episodes for this show"
-
-    return oc
-
-##########################################################################################
-@route(PREFIX + '/episodes', forced_episode = int)
-def Episodes(title, stub, season, forced_episode = None):
-
-    oc = ObjectContainer(title2 = title)
-    org_thumb = SHOW_IMAGE_URL % stub
-    json_url = String.Decode(SERIES_URL) % String.Quote(title)
-    json_data = JSON.ObjectFromURL(url = json_url)
-    
-    for episode in json_data['results']:
-        if str(episode['season']) != str(season):
-            continue
-
-        url = episode['videoURL']
-        id = episode['id']
-        title = episode['name']
-        summary = episode['shortDescription']
-        
-        if episode['videoStillURL']:
-            thumb = episode['videoStillURL']
-        elif episode['thumbnailURL']:
-            thumb = episode['thumbnailURL']
-        else:
-            thumb = org_thumb
-        
-        duration = int(episode['length']) * 1000
-        
-        try:
-            show = episode['series'].split("/")[1]
-        except:
-            show = episode['series']
-
-        index = int(episode['episode']) if episode['episode'] else None
-        season = int(episode['season']) if episode['season'] else None
-        originally_available_at = episode['airdate']
-        
-        forced_episode_found = False
-        if forced_episode:
-            if forced_episode == index:
-                forced_episode_found = True
-                
-        if (not forced_episode) or (forced_episode_found):
-            oc.add(
-                DirectoryObject(
-                    key = Callback(
-                        CreateEpisodeObject,
-                        url = url,
-                        id = id,
-                        title = title,
-                        summary = summary,
-                        thumb = thumb,
-                        duration = duration,
-                        show = show,
-                        index = index,
-                        season = season,
-                        originally_available_at = originally_available_at,
-                        content_rating = episode['rating'] if 'rating' in episode else None
-                    ),
-                    title = title,
-                    summary = summary,
-                    thumb = thumb
-                )
-            )
-            
-            if forced_episode:
-                break
-
-    if len(oc) < 1:
-        oc.header = "Sorry"
-        oc.message = "Couldn't find any full episodes for this show"
-
-    return oc
+SHOWS_PANELS = 'https://api.fox.com/fbc-content/v1_4/screenpanels/57d15aaa3721cfe22013ead4/items?itemsPerPage=100&page=1'
 
 ####################################################################################################
-@route(PREFIX + '/createepisodeobject', id=int, duration=int, index=int, season=int)
-def CreateEpisodeObject(url, id, title, summary, thumb, duration, show, index, season, originally_available_at, content_rating):
+def Start():
 
-    oc = ObjectContainer(title2 = title)
-    episode_xml = XML.ObjectFromURL(url)
+	ObjectContainer.title1 = TITLE
+	HTTP.CacheTime = CACHE_1HOUR
 
-    needs_auth = 'InvalidAuthToken' in XML.StringFromObject(episode_xml)
-    if needs_auth:
-        return ObjectContainer(
-            header = "Unavailable",
-            message = "This episode is currently locked"
-        )
+####################################################################################################
+@handler(PREFIX, TITLE, art=ART, thumb=ICON)
+def MainMenu():
 
-    try:
-        url = VIDEO_TEMPLATE_URL % episode_xml.xpath("//a:param[@name='brightcoveId']", namespaces=SMIL_NS)[0].get('value')
-    except:
-        url = VIDEO_TEMPLATE_URL % id
+	oc = ObjectContainer()
+	json_obj = GetJSON(SHOWS_PANELS)
 
-    oc.add(
-        EpisodeObject(
-            url = url,
-            title = title,
-            summary = summary,
-            thumb = thumb,
-            duration = duration,
-            show = show,
-            index = index,
-            season = season,
-            originally_available_at = Datetime.ParseDate(originally_available_at),
-            content_rating = content_rating,
-        )
-    )
+	for member in json_obj['member']:
 
-    return oc
+		if member['seriesType'] != 'series' or member['fullEpisodeCount'] < 1:
+			continue
+
+		url = member['screenUrl']
+		title = member['name']
+		thumb = member['images']['seriesList']['FHD']
+
+		oc.add(DirectoryObject(
+			key = Callback(Series, url=url, title=title),
+			title = title,
+			thumb = thumb
+		))
+
+	oc.objects.sort(key=lambda obj: Regex('^The ').split(obj.title)[-1])
+	return oc
+
+####################################################################################################
+@route(PREFIX + '/series')
+def Series(url, title):
+
+	oc = ObjectContainer(title2=title)
+	json_obj = GetJSON(url)
+
+	for member in json_obj['panels']['member']:
+
+		if member['panelType'] != 'seriesCollection':
+			continue
+
+		for item in member['items']['member']:
+
+			if item['@type'] != 'Season' or item['fullEpisodeCount'] < 1:
+				continue
+
+			url = item['episodes']['@id']
+			title = 'Season %s' % (item['seasonNumber'])
+			thumb = item['autoPlayStill']['default']['url']
+
+			oc.add(DirectoryObject(
+				key = Callback(Episodes, url=url, title=title),
+				title = title,
+				thumb = thumb
+			))
+
+	return oc
+
+####################################################################################################
+def Episodes(url, title):
+
+	oc = ObjectContainer(title2=title)
+	json_obj = GetJSON(url)
+
+	for member in json_obj['member']:
+
+		if member['requiresAuth']:
+			continue
+
+		url = 'https://www.fox.com/watch/%s/' % (member['id'])
+		show = member['seriesName']
+		title = member['name']
+		summary = member['description']
+		thumb = member['images']['still']['FHD']
+		duration = member['durationInSeconds'] * 1000
+		season = int(member['seasonNumber']) if member['seasonNumber'] is not None else None
+		index = int(member['episodeNumber']) if member['episodeNumber'] is not None else None
+		originally_available_at = Datetime.ParseDate(member['originalAirDate'])
+
+		oc.add(EpisodeObject(
+			url = url,
+			show = show,
+			title = title,
+			summary = summary,
+			thumb = thumb,
+			duration = duration,
+			season = season,
+			index = index,
+			originally_available_at = originally_available_at
+		))
+
+	return oc
+
+####################################################################################################
+def GetJSON(url):
+
+	json_obj = JSON.ObjectFromURL(url, headers={"User-Agent": USER_AGENT, "apikey": "abdcbed02c124d393b39e818a4312055"})
+	return json_obj
