@@ -79,7 +79,7 @@ def Series(url, show):
 
 	if len(oc) < 1:
 		Log(" --- There aren't any free episodes available for %s ---" % (show))
-		return ObjectContainer(header="No episodes available for season", message="There aren't any free episodes available for this season")
+		return ObjectContainer(header="No episodes available for show", message="There aren't any free episodes available for this show")
 	else:
 		return oc
 
