@@ -29,7 +29,7 @@ def MainMenu():
 		thumb = member['images']['seriesList']['FHD']
 
 		oc.add(DirectoryObject(
-			key = Callback(Series, url=url, title=title),
+			key = Callback(Series, url=url, show=title),
 			title = title,
 			thumb = thumb
 		))
@@ -39,9 +39,9 @@ def MainMenu():
 
 ####################################################################################################
 @route(PREFIX + '/series')
-def Series(url, title):
+def Series(url, show):
 
-	oc = ObjectContainer(title2=title)
+	oc = ObjectContainer(title2=show)
 	json_obj = GetJSON(url)
 
 	for member in json_obj['panels']['member']:
@@ -54,7 +54,20 @@ def Series(url, title):
 			if item['@type'] != 'Season' or item['fullEpisodeCount'] < 1:
 				continue
 
+			requires_auth = True
 			url = item['episodes']['@id']
+
+			json_obj = GetJSON(url)
+
+			for member in json_obj['member']:
+
+				if member['requiresAuth'] == False:
+					requires_auth = False
+					break
+
+			if requires_auth:
+				continue
+
 			title = 'Season %s' % (item['seasonNumber'])
 			thumb = item['autoPlayStill']['default']['url']
 
@@ -64,7 +77,11 @@ def Series(url, title):
 				thumb = thumb
 			))
 
-	return oc
+	if len(oc) < 1:
+		Log(" --- There aren't any free episodes available for %s ---" % (show))
+		return ObjectContainer(header="No episodes available for season", message="There aren't any free episodes available for this season")
+	else:
+		return oc
 
 ####################################################################################################
 @route(PREFIX + '/episodes')
