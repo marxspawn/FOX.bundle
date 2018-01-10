@@ -9,6 +9,18 @@ SHOWS_PANELS = 'https://api.fox.com/fbc-content/v1_4/screenpanels/57d15aaa3721cf
 ####################################################################################################
 def Start():
 
+	try:
+		json_obj = JSON.ObjectFromURL('http://ip-api.com/json', cacheTime=10)
+	except:
+		Log("IP Address Check Failed")
+		json_obj = None
+
+	if json_obj and 'countryCode' in json_obj and json_obj['countryCode'] != 'US':
+		Log("= WARNING ==========================================================================================")
+		Log("  According to your IP address you are not in the United States.")
+		Log("  Due to geo-blocking by the content provider, this channel does not work outside the United States.")
+		Log("====================================================================================================")
+
 	ObjectContainer.title1 = TITLE
 	HTTP.CacheTime = CACHE_1HOUR
 
