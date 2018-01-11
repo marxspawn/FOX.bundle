@@ -33,7 +33,7 @@ def MainMenu():
 
 	for member in json_obj['member']:
 
-		if member['seriesType'] != 'series' or member['fullEpisodeCount'] < 1:
+		if member['seriesType'] != 'series' or 'fullEpisodeCount' not in member or member['fullEpisodeCount'] < 1:
 			continue
 
 		url = member['screenUrl']
@@ -63,7 +63,7 @@ def Series(url, show):
 
 		for item in member['items']['member']:
 
-			if item['@type'] != 'Season' or item['fullEpisodeCount'] < 1:
+			if item['@type'] != 'Season' or 'fullEpisodeCount' not in item or item['fullEpisodeCount'] < 1:
 				continue
 
 			requires_auth = True
