@@ -36,9 +36,12 @@ def MainMenu():
 		if member['seriesType'] != 'series' or 'fullEpisodeCount' not in member or member['fullEpisodeCount'] < 1:
 			continue
 
+		if 'network' in member and member['network'] in ['ngc', 'ngw']:
+			continue
+
 		url = member['screenUrl']
 		title = member['name']
-		thumb = member['images']['seriesList']['FHD']
+		thumb = member['images']['seriesList']['FHD'] if member['images']['seriesList'] is not None and 'FHD' in member['images']['seriesList'] else None
 
 		oc.add(DirectoryObject(
 			key = Callback(Series, url=url, show=title),
